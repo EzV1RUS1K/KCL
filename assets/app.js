@@ -15,6 +15,7 @@
   const page = document.body.dataset.page;
   const $ = (s) => document.querySelector(s);
   const fmt = (n) => Number(n || 0).toLocaleString('en-US');
+  const REDUCED = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   /* DOM helper: text is always set as text, never as HTML */
   function h(tag, attrs, ...kids) {
@@ -69,6 +70,81 @@
     return box;
   }
 
+  /* ---------- animations ---------- */
+  // run fn once the element scrolls into view (right away if the browser can't tell)
+  const waiting = new Map();
+  const io = ('IntersectionObserver' in window) ? new IntersectionObserver((entries) => {
+    let k = 0;
+    entries.forEach((e) => {
+      if (!e.isIntersecting) return;
+      io.unobserve(e.target);
+      const fn = waiting.get(e.target);
+      waiting.delete(e.target);
+      if (fn) fn(k++);
+    });
+  }, { rootMargin: '0px 0px -40px 0px' }) : null;
+  function whenVisible(el, fn) {
+    if (!io) return fn(0);
+    waiting.set(el, fn);
+    io.observe(el);
+  }
+  // slide/pop an element in when it becomes visible; `extra` = extra delay in ms
+  function reveal(el, extra) {
+    if (REDUCED || !el) return el;
+    el.classList.add('rv');
+    whenVisible(el, (k) => {
+      el.style.setProperty('--d', `${(extra || 0) + Math.min(k, 12) * 55}ms`);
+      requestAnimationFrame(() => el.classList.add('in'));
+      const done = (e) => {
+        if (e.target !== el || e.propertyName !== 'transform') return;
+        el.removeEventListener('transitionend', done);
+        el.classList.remove('rv', 'in');
+        el.style.removeProperty('--d');
+      };
+      el.addEventListener('transitionend', done);
+    });
+    return el;
+  }
+  // number that counts up from 0 when it becomes visible
+  function counter(value, cls, text) {
+    const el = h('span', { class: cls || 'num' }, text || fmt(value));
+    const to = Number(value) || 0;
+    if (REDUCED || text || to <= 0) return el;
+    el.textContent = '0';
+    whenVisible(el, () => {
+      const start = performance.now(), dur = Math.min(1400, 600 + to / 3);
+      const tick = (now) => {
+        const t = Math.min(1, (now - start) / dur);
+        el.textContent = fmt(Math.round(to * (1 - Math.pow(1 - t, 3))));
+        if (t < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+    return el;
+  }
+  // big titles: letters jump in one by one, and jump again under the mouse
+  function bounceTitles() {
+    document.querySelectorAll('.h1').forEach((title) => {
+      const text = title.textContent.trim();
+      title.setAttribute('aria-label', text);
+      title.textContent = '';
+      let i = 0;
+      text.split(' ').forEach((word, n) => {
+        if (n) title.append(' ');
+        const w = h('span', { class: 'word', 'aria-hidden': 'true' });
+        [...word].forEach((ch) => {
+          const l = h('span', { class: 'ltr', style: REDUCED ? null : `animation-delay:${120 + i++ * 60}ms` }, ch);
+          if (!REDUCED) {
+            l.addEventListener('mouseenter', () => { l.classList.remove('in-done'); l.classList.add('jump'); });
+            l.addEventListener('animationend', () => { l.classList.remove('jump'); l.classList.add('in-done'); });
+          }
+          w.append(l);
+        });
+        title.append(w);
+      });
+    });
+  }
+
   /* header + footer */
   function chrome(data) {
     const links = [['leaderboard', 'Leaderboard', 'index.html'], ['clans', 'Clans', 'clans.html']];
@@ -92,8 +168,9 @@
     $('#season').textContent = `SEASON ${data.season || 1} · RANKED 1V1 · KNIFE ONLY`;
     $('#min-games').textContent = data.min_games || 5;
     $('#stats').replaceChildren(
-      ...[[s.players, 'PLAYERS', ''], [s.matches, 'MATCHES', ''], [s.live, 'LIVE NOW', ' hot']].map(([v, l, c]) =>
-        h('div', { class: 'stat' + c }, h('span', { class: 'num' }, fmt(v)), h('span', { class: 'label' }, l))));
+      ...[[s.players, 'PLAYERS', ''], [s.matches, 'MATCHES', ''], [s.live, 'LIVE NOW', ' hot']].map(([v, l, c], i) =>
+        reveal(h('div', { class: 'stat' + c }, counter(v),
+          h('span', { class: 'label' }, l === 'LIVE NOW' && v > 0 ? h('span', { class: 'live-dot' }) : null, l)), 250 + i * 90)));
 
     const players = data.players || [];
     const podium = $('#podium');
@@ -101,13 +178,14 @@
       podium.replaceWith(h('div', { class: 'notice' }, `No ranked players yet. Play ${data.min_games || 5} ranked matches to get on the board!`));
     } else {
       players.slice(0, 3).forEach((p) => {
-        podium.append(h('div', { class: `pod p${p.place}${p.place === 1 ? ' first' : ''}` },
+        podium.append(reveal(h('div', { class: `pod p${p.place}${p.place === 1 ? ' first' : ''}` },
           h('div', { class: 'pod-top' },
             h('span', { class: 'pop pod-place', style: `color:${p.place === 1 ? '#FFFFFF' : p.place === 2 ? '#C9D4E0' : '#E0894A'}` }, `#${p.place}`),
             clanTag(p.clan, true)),
           h('div', { class: 'who' }, avatar(p, 64),
             h('div', { style: 'display:flex;flex-direction:column;gap:4px;min-width:0' }, h('span', { class: 'name' }, p.name), h('span', {}, badge(p.elo)))),
-          h('div', { class: 'pod-bottom' }, h('span', { class: 'num' }, fmt(p.elo)), h('span', { style: 'font-weight:900' }, `${p.w}W · ${p.l}L`))));
+          h('div', { class: 'pod-bottom' }, counter(p.elo), h('span', { style: 'font-weight:900' }, `${p.w}W · ${p.l}L`))),
+          { 1: 420, 2: 200, 3: 0 }[p.place]));
       });
     }
 
@@ -132,7 +210,7 @@
       const show = (q || rank !== 'ALL' || region !== 'ALL') ? list : list.filter((p) => p.place > 3);
       rows.replaceChildren(...show.map((p) => {
         const games = p.w + p.l;
-        return h('div', { class: 'row', role: 'row' },
+        return reveal(h('div', { class: 'row', role: 'row' },
           h('span', { class: 'place', role: 'cell' }, p.place),
           h('span', { class: 'player', role: 'cell' }, avatar(p, 40),
             h('div', {}, h('div', { style: 'display:flex;align-items:center;gap:8px;min-width:0' }, h('span', { class: 'pname' }, p.name), clanTag(p.clan)),
@@ -142,7 +220,7 @@
           h('span', { class: 'right wlcell', role: 'cell' }, `${p.w} / ${p.l}`),
           h('span', { class: 'right wrcell', role: 'cell' }, games ? `${Math.round(p.w / games * 100)}%` : '—'),
           h('span', { class: 'formcell', role: 'cell' }, h('span', { class: 'form', 'aria-label': `Last results: ${p.form || 'none'}` },
-            (p.form || '').split('').map((t) => h('span', { class: `wl ${t}` }, t)))));
+            (p.form || '').split('').map((t) => h('span', { class: `wl ${t}` }, t))))));
       }));
       empty.hidden = show.length > 0;
       empty.textContent = players.length > 3 || q || rank !== 'ALL' || region !== 'ALL'
@@ -157,14 +235,14 @@
     $('#season').textContent = `SEASON ${data.season || 1} · ${list.length} REGISTERED CLAN${list.length === 1 ? '' : 'S'}`;
     const rank = $('#clan-rank');
     if (!list.length) rank.append(h('div', { class: 'notice' }, 'No clans registered yet. Clan owners register through a ticket on the Discord.'));
-    list.forEach((c) => rank.append(h('div', { class: `clan-row${c.place === 1 ? ' first' : ''}` },
+    list.forEach((c) => rank.append(reveal(h('div', { class: `clan-row${c.place === 1 ? ' first' : ''}` },
       h('span', { class: 'num', style: 'font-size:26px' }, `#${c.place}`),
       emblem(c, 60),
       h('div', { style: 'display:flex;flex-direction:column;gap:6px;min-width:0' },
         h('span', { style: 'font-weight:900;font-size:20px' }, c.tag),
         h('div', { class: 'facts' }, h('span', { class: 'fact' }, `avg Elo ${fmt(c.avg)}`),
           h('span', { class: 'fact' }, `wars ${c.w}W / ${c.l}L`), h('span', { class: 'fact' }, `${c.members} members`))),
-      h('div', { class: 'score' }, h('span', { class: 'num' }, fmt(c.score)), h('span', {}, 'SCORE')))));
+      h('div', { class: 'score' }, counter(c.score), h('span', {}, 'SCORE'))))));
 
     const colors = Object.fromEntries(list.map((c) => [c.tag, c]));
     const wars = $('#wars');
@@ -172,23 +250,25 @@
     if (!warList.length) wars.append(h('div', { class: 'notice', style: 'grid-column:1/-1' }, 'No clan wars yet this season.'));
     warList.slice(0, 6).forEach((w) => {
       const side = (tag) => h('span', { class: 'side' }, emblem(colors[tag] || { tag, color: '#0B0B0B' }, 46), h('span', {}, tag));
-      wars.append(h('div', { class: 'mini' },
+      wars.append(reveal(h('div', { class: 'mini' },
         h('div', { class: 'mini-top' }, h('span', {}, `CLAN WAR #${w.id}`), h('span', {}, w.t ? ago(w.t) : '')),
         h('div', { class: 'vs' }, side(w.a), h('span', { class: 'num', style: 'font-size:18px' }, 'VS'), side(w.b)),
-        h('span', { class: 'winner' }, `${w.winner} won · +25 score`)));
+        h('span', { class: 'winner' }, `${w.winner} won · +25 score`))));
     });
 
     const cards = $('#clan-cards');
-    list.forEach((c) => cards.append(h('div', { class: 'mini' },
+    list.forEach((c) => cards.append(reveal(h('div', { class: 'mini' },
       h('div', { style: 'display:flex;align-items:center;gap:12px' }, emblem(c, 52),
         h('div', { style: 'display:flex;flex-direction:column' }, h('span', { style: 'font-weight:900;font-size:19px' }, c.tag),
           h('span', { style: 'font-size:13px;color:#33404D' }, `#${c.place} · score ${fmt(c.score)}`))),
       h('div', { class: 'boxes' },
         ...[['MEMBERS', c.members], ['ROSTER', `${c.roster}/10`], ['AVG ELO', fmt(c.avg)], ['WARS', `${c.w}–${c.l}`]].map(([k, v]) =>
-          h('div', { class: 'box' }, h('div', { class: 'k' }, k), h('div', { class: 'num' }, v)))))));
+          h('div', { class: 'box' }, h('div', { class: 'k' }, k), h('div', { class: 'num' }, v))))))));
   }
 
   /* ---------- boot ---------- */
+  bounceTitles();
+  document.querySelectorAll('.h2, .formula, .hero-row .lead').forEach((el) => reveal(el));
   fetch(`data.json?t=${Date.now()}`, { cache: 'no-store' })
     .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then((data) => {
