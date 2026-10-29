@@ -125,6 +125,8 @@ main { display: flex; flex-direction: column; gap: 40px; padding-bottom: 72px; }
 .clan-row.first { background: var(--cream); }
 .clan-list { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
 .emblem { border-radius: 16px; border: 3px solid var(--ink); display: inline-flex; align-items: center; justify-content: center; font-family: var(--display); color: var(--white); flex-shrink: 0; text-transform: uppercase; }
+.emblem.has-logo { background: var(--white) !important; overflow: hidden; }
+.emblem img { width: 82%; height: 82%; object-fit: contain; display: block; }
 .facts { display: flex; flex-wrap: wrap; gap: 6px; }
 .fact { padding: 3px 10px; border-radius: 999px; background: var(--foam); border: 2px solid var(--ink); font-size: 13px; font-weight: 900; }
 .score { display: flex; flex-direction: column; align-items: flex-end; }

@@ -54,7 +54,19 @@
   const badge = (elo) => { const r = rankOf(elo); return h('span', { class: 'badge', style: `background:${r.color}` }, r.name.toUpperCase()); };
   const clanTag = (tag, dark) => (tag ? h('span', { class: dark ? 'clan-tag dark' : 'clan-tag' }, tag) : null);
   function emblem(c, size) {
-    return h('span', { class: 'emblem', style: `width:${size}px;height:${size}px;background:${c.color || '#0B0B0B'};font-size:${Math.round(size / (c.tag.length > 3 ? 3.6 : 3))}px` }, c.tag);
+    const tagSize = Math.round(size / (c.tag.length > 3 ? 3.6 : 3));
+    const box = h('span', { class: 'emblem', style: `width:${size}px;height:${size}px;background:${c.color || '#0B0B0B'};font-size:${tagSize}px` });
+    if (c.logo) {
+      /* clan logo = the clan role's icon on Discord; falls back to the tag if it can't load */
+      box.classList.add('has-logo');
+      box.append(h('img', { src: c.logo, alt: c.tag, loading: 'lazy',
+        onerror: () => { box.classList.remove('has-logo'); box.textContent = c.tag; } }));
+    } else if (c.emoji) {
+      box.style.fontSize = `${Math.round(size * 0.55)}px`;
+      box.style.fontFamily = 'system-ui, sans-serif';
+      box.textContent = c.emoji;
+    } else box.textContent = c.tag;
+    return box;
   }
 
   /* header + footer */
