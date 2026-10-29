@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KCL — Leaderboard</title>
+<meta name="description" content="KCL — Knife Competitive League. Ranked knife-only 1v1 leaderboard and clan wars for Roblox Rivals.">
+<link rel="icon" href="assets/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Titan+One&family=Nunito:wght@600;700;800;900&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="leaderboard">
+<div class="water">
+<header id="site-header"></header>
+<section class="wrap hero">
+<div class="hero-text">
+<span class="tag" id="season">SEASON 1 · RANKED 1V1 · KNIFE ONLY</span>
+<h1 class="pop h1">LEADERBOARD</h1>
+</div>
+<div class="hero-row">
+<p class="lead">The best knifers of Knife Competitive League. Play <span id="min-games">5</span> ranked matches to get on the board. Updates after every match.</p>
+<div class="stats" id="stats"></div>
+</div>
+</section>
+</div>
+<main class="wrap">
+<section class="podium lift" id="podium" aria-label="Top 3"></section>
+<section class="card" aria-label="All players">
+<div class="controls">
+<label for="search" class="sr-only">Search a player or clan</label>
+<input id="search" class="search" type="search" placeholder="Search Roblox name or clan…" autocomplete="off">
+<div class="chips" id="regions" role="group" aria-label="Region"></div>
+</div>
+<div class="chips" id="ranks" role="group" aria-label="Rank" style="margin-top:12px"></div>
+<div class="board" role="table" aria-label="Leaderboard">
+<div class="row head" role="row"><span role="columnheader">#</span><span role="columnheader">PLAYER</span><span role="columnheader">RANK</span><span role="columnheader" class="right">ELO</span><span role="columnheader" class="right">W / L</span><span role="columnheader" class="right">WIN %</span><span role="columnheader">LAST 5</span></div>
+<div id="rows" role="rowgroup"></div>
+<div class="notice" id="empty" hidden style="border:0;border-radius:0"></div>
+</div>
+</section>
+</main>
+<footer class="water bottom" id="site-footer"></footer>
+<script src="assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KCL — Clans</title>
+<meta name="description" content="KCL — Knife Competitive League. Ranked knife-only 1v1 leaderboard and clan wars for Roblox Rivals.">
+<link rel="icon" href="assets/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Titan+One&family=Nunito:wght@600;700;800;900&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="clans">
+<div class="water">
+<header id="site-header"></header>
+<section class="wrap hero">
+<div class="hero-text">
+<span class="tag" id="season">SEASON 1 · CLANS</span>
+<h1 class="pop h1">CLAN WARS</h1>
+</div>
+<div class="formula">
+<span style="font-size:13px;font-weight:900;letter-spacing:.12em;color:#33404D">HOW CLAN SCORE WORKS</span>
+<span class="num">Avg Elo of top 5 + 25 per war win</span>
+<span style="font-size:14px">A war is 3 rounds of 3v3 on Arena, any loadout with a knife, knife damage only. Only roster players (max 10) fight.</span>
+</div>
+</section>
+</div>
+<main class="wrap">
+<section class="card lift" aria-labelledby="rank-title">
+<h2 class="pop h2" id="rank-title">RANKING</h2>
+<div class="clan-list" id="clan-rank"></div>
+</section>
+<section aria-labelledby="wars-title" style="display:flex;flex-direction:column;gap:18px">
+<h2 class="pop h2" id="wars-title">RECENT WARS</h2>
+<div class="grid" id="wars"></div>
+</section>
+<section aria-labelledby="all-title" style="display:flex;flex-direction:column;gap:18px">
+<h2 class="pop h2" id="all-title">ALL CLANS</h2>
+<div class="grid" id="clan-cards"></div>
+</section>
+</main>
+<footer class="water bottom" id="site-footer"></footer>
+<script src="assets/app.js"></script>
+</body>
+</html>
