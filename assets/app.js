@@ -266,13 +266,91 @@
           h('div', { class: 'box' }, h('div', { class: 'k' }, k), h('div', { class: 'num' }, v))))))));
   }
 
+  /* ---------- winter event (1 Dec – 31 Jan): snow + banner, switched on by data.event ---------- */
+  function winter(ev) {
+    if (!ev) return;
+    const now = Date.now() / 1000;
+    const live = now >= ev.start && now < ev.end;
+    document.head.append(h('style', {}, `
+      .snow{position:fixed;inset:0;pointer-events:none;z-index:60}
+      .winter{position:relative;margin:18px auto 6px;max-width:1100px;padding:18px 20px;border-radius:22px;
+        border:3px solid #0B0B0B;box-shadow:0 6px 0 #0B0B0B;color:#0B2033;overflow:hidden;
+        background:linear-gradient(135deg,#F4FBFF 0%,#CFEFFF 55%,#9ED8F5 100%)}
+      .winter .wt{font-family:'Titan One',system-ui,sans-serif;font-size:28px;color:#fff;
+        -webkit-text-stroke:2px #0B0B0B;paint-order:stroke fill;letter-spacing:.5px}
+      .winter .ws{font-weight:900;margin-top:4px}
+      .winter .x2{display:inline-block;margin-top:8px;padding:5px 12px;border-radius:999px;border:2px solid #0B0B0B;
+        background:#E8473C;color:#fff;font-weight:900}
+      .winter .x2.off{background:#fff;color:#0B2033}
+      .winter .wtop{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+      .winter .wp{display:flex;align-items:center;gap:8px;padding:6px 10px 6px 6px;border-radius:999px;background:#fff;
+        border:2px solid #0B0B0B;font-weight:800;font-size:14px}
+      .winter .wp img,.winter .wp .ini{width:28px;height:28px;border-radius:50%;background:#5BC0EB;object-fit:cover;
+        display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:#fff}
+      .winter .flake{position:absolute;right:16px;top:8px;font-size:64px;opacity:.35;transform:rotate(12deg)}
+      @media (max-width:600px){.winter{padding:14px}.winter .wt{font-size:23px}.winter .ws{font-size:13px}
+        .winter .flake{display:none}.winter .wp:nth-child(n+4){display:none}}`));
+    if (now >= ev.start - 7 * 86400 && now < ev.end) snow();
+
+    const d = (t) => new Date(t * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    const when = (t) => new Date(t * 1000).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    let status;
+    if (now < ev.start) status = h('span', { class: 'x2 off' }, `Starts ${d(ev.start)}`);
+    else if (!live) status = h('span', { class: 'x2 off' }, 'Event over · thanks for playing!');
+    else if (ev.x2) status = h('span', { class: 'x2' }, `🎄 x${ev.mult} ELO FOR WINS · until ${when(ev.x2_when)}`);
+    else status = h('span', { class: 'x2 off' }, ev.x2_when ? `Next x${ev.mult} Elo: ${when(ev.x2_when)}` : 'Earn snowflakes in every ranked match');
+    const top = (ev.top || []).slice(0, page === 'leaderboard' ? 5 : 3);
+    const box = h('section', { class: 'winter', 'aria-label': 'Winter event' },
+      h('span', { class: 'flake', 'aria-hidden': 'true' }, '❄️'),
+      h('div', { class: 'wt' }, live || now < ev.start ? '❄️ WINTER EVENT' : '🏁 WINTER EVENT RESULTS'),
+      h('div', { class: 'ws' }, `${d(ev.start)} – ${d(ev.end - 1)} · snowflakes for every ranked match · top 3 get winter roles · ${ev.ticket} matches = giveaway ticket`),
+      status,
+      top.length ? h('div', { class: 'wtop' }, top.map((p, i) => h('span', { class: 'wp' },
+        p.avatar ? h('img', { src: p.avatar, alt: '', loading: 'lazy' }) : h('span', { class: 'ini' }, (p.name || '?').slice(0, 2).toUpperCase()),
+        `${['🥇', '🥈', '🥉'][i] || `#${i + 1}`} ${p.name} · ${fmt(p.flakes)} ❄️`))) : null);
+    const main = document.querySelector('main');
+    if (main) main.prepend(h('div', { class: 'wrap' }, reveal(box)));
+  }
+  function snow() {
+    const c = h('canvas', { class: 'snow', 'aria-hidden': 'true' });
+    document.body.append(c);
+    const ctx = c.getContext('2d');
+    let W, H, flakes;
+    const size = () => {
+      const r = window.devicePixelRatio || 1;
+      W = innerWidth; H = innerHeight; c.width = W * r; c.height = H * r; c.style.width = `${W}px`; c.style.height = `${H}px`;
+      ctx.setTransform(r, 0, 0, r, 0, 0);
+      flakes = Array.from({ length: Math.round(Math.min(110, W / 12)) }, () => ({
+        x: Math.random() * W, y: Math.random() * H, r: 1 + Math.random() * 2.6, s: 0.4 + Math.random() * 1.1, w: Math.random() * 6.28 }));
+    };
+    size();
+    addEventListener('resize', () => { size(); if (REDUCED) draw(); });
+    let frame = 0;
+    const draw = () => {
+      frame = 0;
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      for (const f of flakes) {
+        ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, 6.283); ctx.fill();
+        if (REDUCED) continue;
+        f.y += f.s; f.w += 0.01; f.x += Math.sin(f.w) * 0.4;
+        if (f.y > H + 4) { f.y = -4; f.x = Math.random() * W; }
+      }
+      if (!REDUCED && !frame) frame = requestAnimationFrame(draw);
+    };
+    draw();
+  }
+
   /* ---------- boot ---------- */
   bounceTitles();
   document.querySelectorAll('.h2, .formula, .hero-row .lead').forEach((el) => reveal(el));
   fetch(`data.json?t=${Date.now()}`, { cache: 'no-store' })
     .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then((data) => {
+      // rank thresholds come from the bot (they can change between seasons)
+      if (data.ranks) RANKS.forEach((r) => { if (data.ranks[r.key] != null) r.min = data.ranks[r.key]; });
       chrome(data);
+      try { winter(data.event); } catch (e) { /* decoration only */ }
       if (page === 'leaderboard') leaderboard(data);
       if (page === 'clans') clans(data);
     })
