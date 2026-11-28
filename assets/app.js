@@ -52,6 +52,10 @@
     } else box.textContent = ini;
     return box;
   }
+  // big name = server nickname (if the player shows it), small grey line = Roblox name
+  const RBX = 'display:block;font-size:12px;font-weight:800;color:#5B6B7A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:.01em';
+  const bigName = (p) => p.dname || p.name;
+  const rbxLine = (p) => (p.dname ? h('span', { class: 'rbx', style: RBX, title: 'Roblox name' }, `@${p.name}`) : null);
   const badge = (elo) => { const r = rankOf(elo); return h('span', { class: 'badge', style: `background:${r.color}` }, r.name.toUpperCase()); };
   const clanTag = (tag, dark) => (tag ? h('span', { class: dark ? 'clan-tag dark' : 'clan-tag' }, tag) : null);
   function emblem(c, size) {
@@ -184,7 +188,7 @@
             h('span', { class: 'pop pod-place', style: `color:${p.place === 1 ? '#FFFFFF' : p.place === 2 ? '#C9D4E0' : '#E0894A'}` }, `#${p.place}`),
             clanTag(p.clan, true)),
           h('div', { class: 'who' }, avatar(p, 64),
-            h('div', { style: 'display:flex;flex-direction:column;gap:4px;min-width:0' }, h('span', { class: 'name' }, p.name), h('span', {}, badge(p.elo)))),
+            h('div', { style: 'display:flex;flex-direction:column;gap:4px;min-width:0' }, h('span', { class: 'name' }, bigName(p)), rbxLine(p), h('span', {}, badge(p.elo)))),
           h('div', { class: 'pod-bottom' }, counter(p.elo), h('span', { style: 'font-weight:900' }, `${p.w}W · ${p.l}L`))),
           { 1: 420, 2: 200, 3: 0 }[p.place]));
       });
@@ -193,6 +197,7 @@
     let q = (new URLSearchParams(location.search).get('q') || '').trim().toLowerCase();
     let rank = 'ALL', region = 'ALL';
     const search = $('#search');
+    search.placeholder = 'Search name, Roblox or clan…';
     search.value = q;
     search.addEventListener('input', (e) => { q = e.target.value.trim().toLowerCase(); draw(); });
     const regionBox = $('#regions'), rankBox = $('#ranks');
@@ -205,7 +210,7 @@
 
     const rows = $('#rows'), empty = $('#empty');
     function draw() {
-      const list = players.filter((p) => (!q || p.name.toLowerCase().includes(q) || (p.clan || '').toLowerCase() === q)
+      const list = players.filter((p) => (!q || p.name.toLowerCase().includes(q) || (p.dname || '').toLowerCase().includes(q) || (p.clan || '').toLowerCase() === q)
         && (rank === 'ALL' || rankOf(p.elo).key === rank) && (region === 'ALL' || p.region === region));
       // the podium players are in the list only when someone searches or filters
       const show = (q || rank !== 'ALL' || region !== 'ALL') ? list : list.filter((p) => p.place > 3);
@@ -214,7 +219,8 @@
         return reveal(h('div', { class: 'row', role: 'row' },
           h('span', { class: 'place', role: 'cell' }, p.place),
           h('span', { class: 'player', role: 'cell' }, avatar(p, 40),
-            h('div', {}, h('div', { style: 'display:flex;align-items:center;gap:8px;min-width:0' }, h('span', { class: 'pname' }, p.name), clanTag(p.clan)),
+            h('div', { style: 'min-width:0' }, h('div', { style: 'display:flex;align-items:center;gap:8px;min-width:0' }, h('span', { class: 'pname' }, bigName(p)), clanTag(p.clan)),
+              rbxLine(p),
               h('div', { class: 'meta' }, `${rankOf(p.elo).name} · ${p.w}W ${p.l}L`))),
           h('span', { class: 'rankcell', role: 'cell' }, badge(p.elo)),
           h('span', { class: 'elo', role: 'cell' }, fmt(p.elo)),
@@ -389,7 +395,7 @@
     $('#feed').replaceChildren(...(feed.length ? feed.map((f) => {
       const it = names[f.item] || { emoji: '🛒', name: f.item };
       return reveal(h('div', { class: 'fr' }, h('span', { style: 'font-size:22px' }, it.emoji),
-        h('span', {}, h('b', {}, f.name), ` bought ${it.name}`), h('span', { class: 't' }, ago(f.t))));
+        h('span', {}, h('b', {}, f.dname || f.name), f.dname ? h('span', { style: 'color:#5B6B7A;font-size:13px' }, ` (@${f.name})`) : null, ` bought ${it.name}`), h('span', { class: 't' }, ago(f.t))));
     }) : [h('div', { class: 'empty' }, 'No purchases yet. Be the first! 🛒')]));
 
     // x2 calendar
