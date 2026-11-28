@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KCL — Winter Event</title>
+<meta name="description" content="KCL Winter Event — snowflakes for every ranked match, x2 Elo days, rewards and the live snowflake top.">
+<link rel="icon" href="assets/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Titan+One&family=Nunito:wght@600;700;800;900&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/event.css">
+</head>
+<body data-page="event">
+<div class="water">
+<header id="site-header"></header>
+<section class="wrap hero">
+<div class="hero-text">
+<span class="tag" id="ev-tag">WINTER EVENT · 1 DEC – 31 JAN</span>
+<h1 class="pop h1">WINTER EVENT</h1>
+</div>
+<div class="x2card" id="x2card" aria-live="polite"></div>
+<div class="hero-row">
+<p class="lead">Every ranked match earns <b>snowflakes ❄️</b>. Collect the most to win an exclusive 2027 role. Play enough matches to get a giveaway ticket.</p>
+<div class="stats" id="ev-stats"></div>
+</div>
+</section>
+</div>
+<main class="wrap">
+<section class="card lift" aria-labelledby="top-title">
+<div class="ev-head">
+<h2 class="pop h2" id="top-title">SNOWFLAKE TOP</h2>
+<label for="ev-search" class="sr-only">Search a player</label>
+<input id="ev-search" class="search" type="search" placeholder="Search Roblox name…" autocomplete="off">
+</div>
+<div class="board" role="table" aria-label="Snowflake top">
+<div class="ev-row head" role="row"><span role="columnheader">#</span><span role="columnheader">PLAYER</span><span role="columnheader" class="right">SNOWFLAKES</span><span role="columnheader" class="right">MATCHES</span><span role="columnheader" class="right">TICKET</span></div>
+<div id="ev-rows" role="rowgroup"></div>
+<div class="notice" id="ev-empty" hidden style="border:0;border-radius:0"></div>
+</div>
+</section>
+<section aria-labelledby="cal-title" style="display:flex;flex-direction:column;gap:18px">
+<h2 class="pop h2" id="cal-title">x2 ELO DAYS</h2>
+<div class="card cal-wrap"><div class="cal-legend"><span><i class="lg x2"></i>x2 Elo for wins</span><span><i class="lg"></i>normal day</span><span><i class="lg today"></i>today</span><span class="cal-tz">Days are in UTC</span></div><div class="cals" id="cals"></div></div>
+</section>
+<section aria-labelledby="earn-title" style="display:flex;flex-direction:column;gap:18px">
+<h2 class="pop h2" id="earn-title">HOW TO EARN ❄️</h2>
+<div class="grid" id="earn"></div>
+</section>
+<section aria-labelledby="rew-title" style="display:flex;flex-direction:column;gap:18px">
+<h2 class="pop h2" id="rew-title">REWARDS</h2>
+<div class="grid" id="rewards"></div>
+</section>
+<section aria-labelledby="fair-title" style="display:flex;flex-direction:column;gap:18px">
+<h2 class="pop h2" id="fair-title">FAIR PLAY</h2>
+<div class="card fair" id="fair"></div>
+</section>
+</main>
+<footer class="water bottom" id="site-footer"></footer>
+<script src="assets/app.js"></script>
+</body>
+</html>
