@@ -441,8 +441,13 @@
   function decorate() {
     document.documentElement.classList.add('winter-on');
     document.head.append(h('link', { rel: 'stylesheet', href: 'assets/winter.css' }));
-    document.querySelectorAll('.logo img').forEach((i) => { i.src = 'assets/winter-logo.gif'; });
-    document.querySelectorAll('.foot-card img').forEach((i) => { i.src = 'assets/winter-logo.png'; });
+    const swap = (img, src) => {
+      const old = img.src;
+      img.addEventListener('error', () => { if (img.src !== old) img.src = old; }, { once: true });
+      img.src = src;
+    };
+    document.querySelectorAll('.logo img').forEach((i) => swap(i, 'assets/winter-logo.gif'));
+    document.querySelectorAll('.foot-card img').forEach((i) => swap(i, 'assets/winter-logo.png'));
     const icon = document.querySelector('link[rel="icon"]');
     if (icon) icon.href = 'assets/winter-favicon.png';
     const colors = ['#FF4B4B', '#FFD21F', '#3DDC6B', '#3FA9FF', '#FFFFFF'];
@@ -502,12 +507,14 @@
       // rank thresholds come from the bot (they can change between seasons)
       if (data.ranks) RANKS.forEach((r) => { if (data.ranks[r.key] != null) r.min = data.ranks[r.key]; });
       chrome(data);
-      try { winter(data.event); } catch (e) { /* decoration only */ }
-      if (page === 'leaderboard') leaderboard(data);
-      if (page === 'clans') clans(data);
-      if (page === 'event') eventPage(data);
-    })
-    .catch(() => {
+      try { winter(data.event); } catch (e) { console.error(e); /* decoration only */ }
+      // a bug on one page must never break the whole site
+      try {
+        if (page === 'leaderboard') leaderboard(data);
+        if (page === 'clans') clans(data);
+        if (page === 'event') eventPage(data);
+      } catch (e) { console.error(e); }
+    }, () => {
       chrome(null);
       const main = document.querySelector('main');
       if (main) main.prepend(h('div', { class: 'notice' }, 'Could not load the league data right now. Try again in a minute.'));
