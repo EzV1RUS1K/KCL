@@ -298,14 +298,14 @@
     let status;
     if (now < ev.start) status = h('span', { class: 'x2 off' }, `Starts ${d(ev.start)}`);
     else if (!live) status = h('span', { class: 'x2 off' }, 'Event over · thanks for playing!');
-    else if (ev.x2) status = h('span', { class: 'x2' }, `🎄 x${ev.mult} ELO FOR WINS · until ${when(ev.x2_when)}`);
-    else status = h('span', { class: 'x2 off' }, ev.x2_when ? `Next x${ev.mult} Elo: ${when(ev.x2_when)}` : 'Earn snowflakes in every ranked match');
-    const top = (ev.top || []).slice(0, page === 'leaderboard' ? 5 : 3);
+    else if (ev.x2) status = h('span', { class: 'x2' }, `🎄 x${ev.mult} DAY · double Elo + snowflakes · until ${when(ev.x2_when)}`);
+    else status = h('span', { class: 'x2 off' }, ev.x2_when ? `Next x${ev.mult} day: ${when(ev.x2_when)}` : 'Earn snowflakes in every ranked match');
+    const top = [];
     const box = h('section', { class: 'winter', 'aria-label': 'Winter event' },
       h('span', { class: 'flake', 'aria-hidden': 'true' }, '❄️'),
       h('div', { class: 'wt' }, live || now < ev.start ? '❄️ WINTER EVENT' : '🏁 WINTER EVENT RESULTS'),
-      h('div', { class: 'ws' }, `${d(ev.start)} – ${d(ev.end - 1)} · snowflakes for every ranked match · top 3 get winter roles · ${ev.ticket} matches = giveaway ticket`),
-      status,
+      h('div', { class: 'ws' }, `${d(ev.start)} – ${d(ev.end - 1)} · snowflakes for every ranked match · spend them on winter roles in the shop · ${ev.ticket} matches = giveaway ticket`),
+      status, ' ', h('a', { class: 'x2 off', href: 'event.html', style: 'text-decoration:none' }, '🛒 Shop & details →'),
       top.length ? h('div', { class: 'wtop' }, top.map((p, i) => h('span', { class: 'wp' },
         p.avatar ? h('img', { src: p.avatar, alt: '', loading: 'lazy' }) : h('span', { class: 'ini' }, (p.name || '?').slice(0, 2).toUpperCase()),
         `${['🥇', '🥈', '🥉'][i] || `#${i + 1}`} ${p.name} · ${fmt(p.flakes)} ❄️`))) : null);
@@ -346,7 +346,7 @@
     const mult = ev.mult || 2, need = ev.ticket || 20;
     const dd = (t) => new Date(t * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
     const when = (t) => new Date(t * 1000).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-    $('#ev-tag').textContent = `${dd(ev.start)} – ${dd(ev.end - 1)} · SNOWFLAKES · x${mult} ELO DAYS`.toUpperCase();
+    $('#ev-tag').textContent = `${dd(ev.start)} – ${dd(ev.end - 1)} · SNOWFLAKE SHOP · x${mult} DAYS`.toUpperCase();
 
     // live x2 status
     const card = $('#x2card');
@@ -355,10 +355,10 @@
       let title, sub, count = null, on = false;
       if (now < ev.start) { title = 'STARTS SOON'; sub = `The event starts ${when(ev.start)}`; count = `in ${dur(ev.start - now)}`; }
       else if (now >= ev.end) { title = 'EVENT IS OVER'; sub = 'Thanks for playing! See the final top below.'; }
-      else if (s.on) { on = true; title = `🎄 x${mult} ELO IS ON`; sub = `Every ranked win gives x${mult} Elo. Losses stay normal.`; count = `ends in ${dur(s.at - now)}`; }
-      else { title = `x${mult} ELO IS OFF`; sub = s.at ? `Next x${mult}: ${when(s.at)}` : `No more x${mult} days this event.`; count = s.at ? `starts in ${dur(s.at - now)}` : null; }
+      else if (s.on) { on = true; title = `🎄 x${mult} DAY IS ON`; sub = `x${mult} Elo for wins + double snowflakes! Losses stay normal.`; count = `ends in ${dur(s.at - now)}`; }
+      else { title = `x${mult} IS OFF`; sub = s.at ? `Next x${mult} day: ${when(s.at)}` : `No more x${mult} days this event.`; count = s.at ? `starts in ${dur(s.at - now)}` : null; }
       card.classList.toggle('on', on);
-      card.replaceChildren(h('span', { class: 'x2-k' }, 'DOUBLE ELO FOR WINS'), h('span', { class: 'x2-t num' }, title),
+      card.replaceChildren(h('span', { class: 'x2-k' }, 'DOUBLE ELO + DOUBLE SNOWFLAKES'), h('span', { class: 'x2-t num' }, title),
         h('span', { class: 'x2-s' }, sub), count ? h('span', { class: 'x2-c' }, count) : null);
     };
     tick();
@@ -370,31 +370,27 @@
     const daysLeft = now0 < ev.start ? Math.ceil((ev.end - ev.start) / DAY) : Math.max(0, Math.ceil((ev.end - now0) / DAY));
     const players = ev.players != null ? ev.players : top.length;
     const tickets = ev.tickets != null ? ev.tickets : top.filter((p) => (p.matches || 0) >= need).length;
-    $('#ev-stats').replaceChildren(...[[players, 'PLAYERS', ''], [tickets, 'TICKETS', ''], [daysLeft, 'DAYS LEFT', ' hot']].map(([v, l, c], i) =>
+    const bought = ev.buys != null ? ev.buys : 0;
+    $('#ev-stats').replaceChildren(...[[players, 'PLAYERS', ''], [bought, 'ROLES BOUGHT', ''], [daysLeft, 'DAYS LEFT', ' hot']].map(([v, l, c], i) =>
       reveal(h('div', { class: 'stat' + c }, counter(v), h('span', { class: 'label' }, l)), 250 + i * 90)));
 
-    // snowflake top
-    const rows = $('#ev-rows'), empty = $('#ev-empty'), search = $('#ev-search');
-    const ranked = top.map((p, i) => ({ ...p, place: i + 1 }));
-    const draw = (q) => {
-      const list = ranked.filter((p) => !q || p.name.toLowerCase().includes(q));
-      rows.replaceChildren(...list.map((p) => {
-        const m = p.matches || 0, has = m >= need;
-        return reveal(h('div', { class: `ev-row${p.place <= 3 ? ` top${p.place}` : ''}`, role: 'row' },
-          h('span', { class: 'place', role: 'cell' }, ['🥇', '🥈', '🥉'][p.place - 1] || p.place),
-          h('span', { class: 'player', role: 'cell' }, avatar({ name: p.name, avatar: p.avatar, elo: 200 }, 40),
-            h('div', {}, h('span', { class: 'pname' }, p.name),
-              h('div', { class: 'meta' }, `${m} matches · ${has ? 'ticket ✅' : `${m}/${need} for a ticket`}`))),
-          h('span', { class: 'fl', role: 'cell' }, `${fmt(p.flakes)} ❄️`),
-          h('span', { class: 'right mcell', role: 'cell' }, fmt(m)),
-          h('span', { class: 'right tcell', role: 'cell' }, has ? h('span', { class: 'ticket yes', title: 'Giveaway ticket' }, '🎟️')
-            : h('span', { title: `${m}/${need} matches` }, h('span', { class: 'ticket' }, `${m}/${need}`)))));
-      }));
-      empty.hidden = list.length > 0;
-      empty.textContent = ranked.length ? 'No players match this search.' : 'No snowflakes yet. Play ranked to be the first!';
-    };
-    draw('');
-    search.addEventListener('input', (e) => draw(e.target.value.trim().toLowerCase()));
+    // snowflake shop
+    const shop = ev.shop || [];
+    const maxPrice = Math.max(0, ...shop.map((i) => i.price));
+    $('#shop').replaceChildren(...shop.map((it) => reveal(h('div', { class: `item${it.price === maxPrice ? ' top' : ''}`, style: `--rc:${it.color || '#5BC0EB'}` },
+      h('span', { class: 'ico', 'aria-hidden': 'true' }, it.emoji),
+      h('span', { class: 'iname' }, it.name),
+      h('span', { class: 'price' }, `${fmt(it.price)} ❄️`),
+      h('span', { class: 'sold' }, it.sold ? `BOUGHT ${fmt(it.sold)}×` : 'NOBODY HAS IT YET')))));
+    if (!shop.length) $('#shop').append(h('div', { class: 'notice' }, 'The shop opens when the event starts.'));
+    // recent purchases (Roblox names only)
+    const names = Object.fromEntries(shop.map((i) => [i.key, i]));
+    const feed = ev.feed || [];
+    $('#feed').replaceChildren(...(feed.length ? feed.map((f) => {
+      const it = names[f.item] || { emoji: '🛒', name: f.item };
+      return reveal(h('div', { class: 'fr' }, h('span', { style: 'font-size:22px' }, it.emoji),
+        h('span', {}, h('b', {}, f.name), ` bought ${it.name}`), h('span', { class: 't' }, ago(f.t))));
+    }) : [h('div', { class: 'empty' }, 'No purchases yet. Be the first! 🛒')]));
 
     // x2 calendar
     const cals = $('#cals');
@@ -422,23 +418,24 @@
       [`+${pts.win}`, 'WIN', 'Extra snowflakes on top for winning.'],
       [`+${pts.daily}`, 'FIRST WIN OF THE DAY', 'Your first ranked win each day (UTC).'],
       [`+${pts.streak}`, '3 WINS IN A ROW', 'Every 3rd win in a row: 3rd, 6th, 9th…'],
-    ].map(([n, t, s], i) => reveal(h('div', { class: `mini${i === 3 ? ' hl' : ''}` },
+      [`x${mult}`, 'ON x2 DAYS', 'Weekends + 24 Dec – 1 Jan: every snowflake above is doubled!'],
+    ].map(([n, t, s], i) => reveal(h('div', { class: `mini${i === 4 ? ' hl' : ''}` },
       h('span', { class: 'earn-n' }, `${n} ❄️`), h('span', { style: 'font-weight:900;font-size:18px' }, t), h('span', { style: 'font-size:15px' }, s)))));
 
-    // rewards
-    const roles = ev.roles || ['EVENT WINNER 2027', 'EVENT RUNNER-UP 2027', 'EVENT TOP 3 2027'];
+    // giveaway
     $('#rewards').replaceChildren(...[
-      ...roles.slice(0, 3).map((r, i) => [['🥇 1ST PLACE', '🥈 2ND PLACE', '🥉 3RD PLACE'][i], `❄️ ${r}`, 'Exclusive role, given when the event ends.']),
-      ['🎟️ GIVEAWAY', `${need} MATCHES = 1 TICKET`, 'Play ranked during the event to enter the giveaway.'],
-    ].map(([k, r, s], i) => reveal(h('div', { class: `mini${i === 0 ? ' hl' : ''}` },
-      h('span', { class: 'num', style: 'font-size:24px' }, k), h('span', { class: 'role-pill' }, r), h('span', { style: 'font-size:15px' }, s)))));
+      ['🎟️ HOW TO ENTER', `${need} RANKED MATCHES = 1 TICKET`, 'Play ranked during the event. Shop purchases don\'t affect your ticket.'],
+      ['🎁 THE DRAW', `${fmt(tickets)} TICKET${tickets === 1 ? '' : 'S'} SO FAR`, 'The owners draw the winner(s) among all tickets when the event ends.'],
+    ].map(([k, r, s2], i) => reveal(h('div', { class: `mini${i === 0 ? ' hl' : ''}` },
+      h('span', { class: 'num', style: 'font-size:24px' }, k), h('span', { class: 'role-pill' }, r), h('span', { style: 'font-size:15px' }, s2)))));
 
     // fair play
     $('#fair').replaceChildren(h('ul', {},
       h('li', {}, 'Max 2 ranked matches per day against the same opponent.'),
       h('li', {}, 'Cancelled matches lose their snowflakes.'),
       h('li', {}, 'Cheaters are removed from the event and the giveaway.'),
-      h('li', {}, `x${mult} Elo is only for wins. Losses always stay normal.`)));
+      h('li', {}, `x${mult} Elo is only for wins. Losses always stay normal.`),
+      h('li', {}, 'Snowflakes disappear when the event ends — spend them! Roles you bought stay forever.')));
   }
   /* winter look: icy background, garland, snow caps, Santa hat on #1, gifts, winter logo (styles in winter.css) */
   function decorate() {
