@@ -148,6 +148,7 @@
   /* header + footer */
   function chrome(data) {
     const links = [['leaderboard', 'Leaderboard', 'index.html'], ['clans', 'Clans', 'clans.html']];
+    if (data && data.event) links.push(['event', '❄️ Winter Event', 'event.html']);
     const invite = data && data.invite;
     $('#site-header').append(h('div', { class: 'wrap site-header' },
       h('a', { href: 'index.html', class: 'logo', 'aria-label': 'KCL home' }, h('img', { src: 'assets/logo.png', alt: 'KCL', width: 60, height: 60 })),
@@ -290,7 +291,7 @@
       .winter .flake{position:absolute;right:16px;top:8px;font-size:64px;opacity:.35;transform:rotate(12deg)}
       @media (max-width:600px){.winter{padding:14px}.winter .wt{font-size:23px}.winter .ws{font-size:13px}
         .winter .flake{display:none}.winter .wp:nth-child(n+4){display:none}}`));
-    if (now >= ev.start - 7 * 86400 && now < ev.end) snow();
+    if (now >= ev.start - 7 * 86400 && now < ev.end) { snow(); decorate(); }
 
     const d = (t) => new Date(t * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
     const when = (t) => new Date(t * 1000).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -309,7 +310,161 @@
         p.avatar ? h('img', { src: p.avatar, alt: '', loading: 'lazy' }) : h('span', { class: 'ini' }, (p.name || '?').slice(0, 2).toUpperCase()),
         `${['🥇', '🥈', '🥉'][i] || `#${i + 1}`} ${p.name} · ${fmt(p.flakes)} ❄️`))) : null);
     const main = document.querySelector('main');
-    if (main) main.prepend(h('div', { class: 'wrap' }, reveal(box)));
+    if (main && page !== 'event') main.prepend(h('div', { class: 'wrap' }, reveal(box)));
+  }
+
+  /* ---------- winter event page ---------- */
+  const DAY = 86400;
+  const evHoliday = (ev) => ev.holiday || [Date.UTC(2026, 11, 24) / 1000, Date.UTC(2027, 0, 2) / 1000];
+  // same rule as the bot: x2 Elo for wins on Saturdays/Sundays (UTC) and every day of the holiday week
+  function isX2(ev, t) {
+    if (t < ev.start || t >= ev.end) return false;
+    const [a, b] = evHoliday(ev);
+    if (t >= a && t < b) return true;
+    const wd = new Date(t * 1000).getUTCDay();
+    return wd === 0 || wd === 6;
+  }
+  function x2State(ev, now) {
+    const on = isX2(ev, now);
+    let t = now < ev.start ? ev.start : Math.floor(now / DAY) * DAY + DAY;
+    while (t < ev.end && isX2(ev, t) === on) t += DAY;
+    return { on, at: on ? Math.min(t, ev.end) : (t < ev.end ? t : 0) };
+  }
+  function dur(s) {
+    s = Math.max(0, Math.floor(s));
+    const d = Math.floor(s / DAY), hh = Math.floor(s % DAY / 3600), mm = Math.floor(s % 3600 / 60), ss = s % 60;
+    const p = (n) => String(n).padStart(2, '0');
+    return `${d ? `${d}d ` : ''}${p(hh)}:${p(mm)}:${p(ss)}`;
+  }
+  function eventPage(data) {
+    const ev = data.event;
+    const main = $('main');
+    if (!ev) {
+      main.replaceChildren(h('div', { class: 'notice' }, 'The Winter Event is not running right now.'));
+      return;
+    }
+    const mult = ev.mult || 2, need = ev.ticket || 20;
+    const dd = (t) => new Date(t * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    const when = (t) => new Date(t * 1000).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    $('#ev-tag').textContent = `${dd(ev.start)} – ${dd(ev.end - 1)} · SNOWFLAKES · x${mult} ELO DAYS`.toUpperCase();
+
+    // live x2 status
+    const card = $('#x2card');
+    const tick = () => {
+      const now = Date.now() / 1000, s = x2State(ev, now);
+      let title, sub, count = null, on = false;
+      if (now < ev.start) { title = 'STARTS SOON'; sub = `The event starts ${when(ev.start)}`; count = `in ${dur(ev.start - now)}`; }
+      else if (now >= ev.end) { title = 'EVENT IS OVER'; sub = 'Thanks for playing! See the final top below.'; }
+      else if (s.on) { on = true; title = `🎄 x${mult} ELO IS ON`; sub = `Every ranked win gives x${mult} Elo. Losses stay normal.`; count = `ends in ${dur(s.at - now)}`; }
+      else { title = `x${mult} ELO IS OFF`; sub = s.at ? `Next x${mult}: ${when(s.at)}` : `No more x${mult} days this event.`; count = s.at ? `starts in ${dur(s.at - now)}` : null; }
+      card.classList.toggle('on', on);
+      card.replaceChildren(h('span', { class: 'x2-k' }, 'DOUBLE ELO FOR WINS'), h('span', { class: 'x2-t num' }, title),
+        h('span', { class: 'x2-s' }, sub), count ? h('span', { class: 'x2-c' }, count) : null);
+    };
+    tick();
+    setInterval(tick, 1000);
+
+    // stats
+    const top = ev.top || [];
+    const now0 = Date.now() / 1000;
+    const daysLeft = now0 < ev.start ? Math.ceil((ev.end - ev.start) / DAY) : Math.max(0, Math.ceil((ev.end - now0) / DAY));
+    const players = ev.players != null ? ev.players : top.length;
+    const tickets = ev.tickets != null ? ev.tickets : top.filter((p) => (p.matches || 0) >= need).length;
+    $('#ev-stats').replaceChildren(...[[players, 'PLAYERS', ''], [tickets, 'TICKETS', ''], [daysLeft, 'DAYS LEFT', ' hot']].map(([v, l, c], i) =>
+      reveal(h('div', { class: 'stat' + c }, counter(v), h('span', { class: 'label' }, l)), 250 + i * 90)));
+
+    // snowflake top
+    const rows = $('#ev-rows'), empty = $('#ev-empty'), search = $('#ev-search');
+    const ranked = top.map((p, i) => ({ ...p, place: i + 1 }));
+    const draw = (q) => {
+      const list = ranked.filter((p) => !q || p.name.toLowerCase().includes(q));
+      rows.replaceChildren(...list.map((p) => {
+        const m = p.matches || 0, has = m >= need;
+        return reveal(h('div', { class: `ev-row${p.place <= 3 ? ` top${p.place}` : ''}`, role: 'row' },
+          h('span', { class: 'place', role: 'cell' }, ['🥇', '🥈', '🥉'][p.place - 1] || p.place),
+          h('span', { class: 'player', role: 'cell' }, avatar({ name: p.name, avatar: p.avatar, elo: 200 }, 40),
+            h('div', {}, h('span', { class: 'pname' }, p.name),
+              h('div', { class: 'meta' }, `${m} matches · ${has ? 'ticket ✅' : `${m}/${need} for a ticket`}`))),
+          h('span', { class: 'fl', role: 'cell' }, `${fmt(p.flakes)} ❄️`),
+          h('span', { class: 'right mcell', role: 'cell' }, fmt(m)),
+          h('span', { class: 'right tcell', role: 'cell' }, has ? h('span', { class: 'ticket yes', title: 'Giveaway ticket' }, '🎟️')
+            : h('span', { title: `${m}/${need} matches` }, h('span', { class: 'ticket' }, `${m}/${need}`)))));
+      }));
+      empty.hidden = list.length > 0;
+      empty.textContent = ranked.length ? 'No players match this search.' : 'No snowflakes yet. Play ranked to be the first!';
+    };
+    draw('');
+    search.addEventListener('input', (e) => draw(e.target.value.trim().toLowerCase()));
+
+    // x2 calendar
+    const cals = $('#cals');
+    const today = Math.floor(Date.now() / 1000 / DAY) * DAY;
+    const first = new Date(ev.start * 1000), last = new Date((ev.end - 1) * 1000);
+    for (let y = first.getUTCFullYear(), mo = first.getUTCMonth(); y < last.getUTCFullYear() || (y === last.getUTCFullYear() && mo <= last.getUTCMonth()); mo === 11 ? (y++, mo = 0) : mo++) {
+      const name = new Date(Date.UTC(y, mo, 1)).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+      const grid = h('div', { class: 'cal-grid' }, ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map((d) => h('span', { class: 'dow' }, d)));
+      const lead = (new Date(Date.UTC(y, mo, 1)).getUTCDay() + 6) % 7;
+      for (let i = 0; i < lead; i++) grid.append(h('span', {}));
+      const days = new Date(Date.UTC(y, mo + 1, 0)).getUTCDate();
+      for (let dnum = 1; dnum <= days; dnum++) {
+        const t = Date.UTC(y, mo, dnum) / 1000;
+        const inEv = t >= ev.start && t < ev.end;
+        const cls = ['day', !inEv ? 'out' : '', inEv && isX2(ev, t + 3600) ? 'x2' : '', t < today ? 'past' : '', t === today ? 'today' : ''].filter(Boolean).join(' ');
+        grid.append(h('span', { class: cls, title: inEv && isX2(ev, t + 3600) ? `x${mult} Elo for wins` : '' }, dnum));
+      }
+      cals.append(reveal(h('div', { class: 'cal' }, h('h3', {}, name), grid)));
+    }
+
+    // how to earn
+    const pts = ev.points || { play: 1, win: 2, daily: 3, streak: 5 };
+    $('#earn').replaceChildren(...[
+      [`+${pts.play}`, 'PLAY A MATCH', 'Every ranked match counts, win or lose.'],
+      [`+${pts.win}`, 'WIN', 'Extra snowflakes on top for winning.'],
+      [`+${pts.daily}`, 'FIRST WIN OF THE DAY', 'Your first ranked win each day (UTC).'],
+      [`+${pts.streak}`, '3 WINS IN A ROW', 'Every 3rd win in a row: 3rd, 6th, 9th…'],
+    ].map(([n, t, s], i) => reveal(h('div', { class: `mini${i === 3 ? ' hl' : ''}` },
+      h('span', { class: 'earn-n' }, `${n} ❄️`), h('span', { style: 'font-weight:900;font-size:18px' }, t), h('span', { style: 'font-size:15px' }, s)))));
+
+    // rewards
+    const roles = ev.roles || ['EVENT WINNER 2027', 'EVENT RUNNER-UP 2027', 'EVENT TOP 3 2027'];
+    $('#rewards').replaceChildren(...[
+      ...roles.slice(0, 3).map((r, i) => [['🥇 1ST PLACE', '🥈 2ND PLACE', '🥉 3RD PLACE'][i], `❄️ ${r}`, 'Exclusive role, given when the event ends.']),
+      ['🎟️ GIVEAWAY', `${need} MATCHES = 1 TICKET`, 'Play ranked during the event to enter the giveaway.'],
+    ].map(([k, r, s], i) => reveal(h('div', { class: `mini${i === 0 ? ' hl' : ''}` },
+      h('span', { class: 'num', style: 'font-size:24px' }, k), h('span', { class: 'role-pill' }, r), h('span', { style: 'font-size:15px' }, s)))));
+
+    // fair play
+    $('#fair').replaceChildren(h('ul', {},
+      h('li', {}, 'Max 2 ranked matches per day against the same opponent.'),
+      h('li', {}, 'Cancelled matches lose their snowflakes.'),
+      h('li', {}, 'Cheaters are removed from the event and the giveaway.'),
+      h('li', {}, `x${mult} Elo is only for wins. Losses always stay normal.`)));
+  }
+  /* winter look: icy background, garland, snow caps, Santa hat on #1, gifts, winter logo (styles in winter.css) */
+  function decorate() {
+    document.documentElement.classList.add('winter-on');
+    document.head.append(h('link', { rel: 'stylesheet', href: 'assets/winter.css' }));
+    document.querySelectorAll('.logo img').forEach((i) => { i.src = 'assets/winter-logo.gif'; });
+    document.querySelectorAll('.foot-card img').forEach((i) => { i.src = 'assets/winter-logo.png'; });
+    const icon = document.querySelector('link[rel="icon"]');
+    if (icon) icon.href = 'assets/winter-favicon.png';
+    const colors = ['#FF4B4B', '#FFD21F', '#3DDC6B', '#3FA9FF', '#FFFFFF'];
+    const garland = h('div', { class: 'garland', 'aria-hidden': 'true' });
+    for (let i = 0; i < 40; i++) {
+      garland.append(h('span', { class: 'bulb', style: `left:${i * 90 + 45}px;--c:${colors[i % colors.length]}` }));
+    }
+    const head = document.querySelector('#site-header');
+    if (head) head.prepend(garland);
+    const band = document.querySelector('.water');
+    if (band) {
+      band.append(h('img', { class: 'gifts hero-gift l', src: 'assets/gifts-left.png', alt: '', 'aria-hidden': 'true' }));
+      band.append(h('img', { class: 'gifts hero-gift r', src: 'assets/gifts-right.png', alt: '', 'aria-hidden': 'true' }));
+    }
+    const foot = document.querySelector('#site-footer');
+    if (foot) {
+      foot.append(h('img', { class: 'gifts foot-gift l', src: 'assets/gifts-left.png', alt: '', 'aria-hidden': 'true' }));
+      foot.append(h('img', { class: 'gifts foot-gift r', src: 'assets/gifts-right.png', alt: '', 'aria-hidden': 'true' }));
+    }
   }
   function snow() {
     const c = h('canvas', { class: 'snow', 'aria-hidden': 'true' });
@@ -353,6 +508,7 @@
       try { winter(data.event); } catch (e) { /* decoration only */ }
       if (page === 'leaderboard') leaderboard(data);
       if (page === 'clans') clans(data);
+      if (page === 'event') eventPage(data);
     })
     .catch(() => {
       chrome(null);

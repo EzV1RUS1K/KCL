@@ -1,0 +1,64 @@
+/* KCL — Winter Event page */
+.x2card { flex: 0 1 420px; display: flex; flex-direction: column; gap: 4px; padding: 18px 22px; border-radius: 22px;
+  background: var(--white); border: 4px solid var(--ink); box-shadow: 7px 7px 0 var(--ink); min-width: 0; }
+.x2card .x2-k { font-size: 12px; font-weight: 900; letter-spacing: .14em; color: var(--muted); }
+.x2card .x2-t { font-size: 32px; line-height: 1.1; }
+.x2card .x2-s { font-size: 15px; font-weight: 800; }
+.x2card .x2-c { font-family: var(--display); font-size: 22px; font-variant-numeric: tabular-nums; }
+.x2card.on { background: #E8473C; color: var(--white); animation: x2pulse 2.2s ease-in-out infinite; }
+.x2card.on .x2-k { color: #FFE3DF; }
+@keyframes x2pulse { 0%, 100% { box-shadow: 7px 7px 0 var(--ink); } 50% { box-shadow: 7px 7px 0 var(--ink), 0 0 0 8px rgba(232, 71, 60, .25); } }
+
+.ev-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; }
+.ev-head .search { flex: 0 1 320px; }
+
+.ev-row { display: grid; grid-template-columns: 56px minmax(0, 1fr) 130px 100px 90px; align-items: center; gap: 12px; padding: 12px 16px;
+  border-top: 2px solid var(--ink); background: var(--white); }
+.ev-row:nth-child(even) { background: var(--foam-2); }
+.ev-row.head { border-top: 0; background: var(--ink); color: var(--white); font-size: 13px; font-weight: 900; letter-spacing: .1em; padding-top: 14px; padding-bottom: 14px; }
+.ev-row .place { font-family: var(--display); font-size: 20px; }
+.ev-row .player { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.ev-row .pname { font-weight: 900; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ev-row .fl { font-family: var(--display); font-size: 20px; text-align: right; }
+.ev-row .right { text-align: right; font-weight: 900; }
+.ev-row .meta { display: none; }
+.ev-row.top1 { background: var(--yellow); } .ev-row.top2 { background: #E6EEF6; } .ev-row.top3 { background: #F6E1CF; }
+.ticket { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; height: 28px; padding: 0 8px; border-radius: 8px;
+  border: 2px solid var(--ink); background: var(--white); font-size: 13px; font-weight: 900; }
+.ticket.yes { background: #3DDC6B; }
+.prog { display: block; height: 6px; margin-top: 4px; border-radius: 99px; background: #D8E6F2; overflow: hidden; }
+.prog i { display: block; height: 100%; background: var(--deep); border-radius: 99px; }
+@media (max-width: 760px) {
+  .ev-row { grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; padding: 10px 12px; }
+  .ev-row.head { display: none; }
+  .ev-row .mcell, .ev-row .tcell { display: none; }
+  .ev-row .meta { display: block; font-size: 12px; font-weight: 800; color: var(--muted); }
+  .ev-row .player > div { min-width: 0; }
+}
+
+/* calendar */
+.cal-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; font-weight: 900; font-size: 14px; margin-bottom: 16px; }
+.cal-legend span { display: inline-flex; align-items: center; gap: 8px; }
+.cal-legend .cal-tz { margin-left: auto; color: var(--muted); font-size: 13px; }
+.lg { width: 20px; height: 20px; border-radius: 6px; border: 2px solid var(--ink); background: var(--white); display: inline-block; }
+.lg.x2 { background: #E8473C; } .lg.today { box-shadow: 0 0 0 3px var(--deep); }
+.cals { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 24px; }
+.cal h3 { margin: 0 0 10px; font-family: var(--display); font-weight: 400; font-size: 22px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.cal-grid .dow { font-size: 11px; font-weight: 900; letter-spacing: .08em; text-align: center; color: var(--muted); }
+.day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 10px; border: 2px solid var(--ink);
+  background: var(--white); font-weight: 900; font-size: 15px; }
+.day.x2 { background: #E8473C; color: var(--white); }
+.day.past { opacity: .4; }
+.day.today { box-shadow: 0 0 0 3px var(--deep); transform: scale(1.06); }
+.day.out { border-color: transparent; background: transparent; color: #9AA6B2; font-weight: 700; }
+
+/* earn + rewards */
+.earn-n { font-family: var(--display); font-size: 40px; line-height: 1; }
+.mini.hl { background: var(--yellow); }
+.role-pill { align-self: flex-start; padding: 6px 12px; border-radius: 999px; background: #5BC0EB; border: 2px solid var(--ink); color: var(--white);
+  font-weight: 900; font-size: 14px; letter-spacing: .04em; }
+.fair ul { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 8px; font-size: 16px; }
+
+/* the lifted card must sit above the water band */
+.card.lift { position: relative; z-index: 1; }
